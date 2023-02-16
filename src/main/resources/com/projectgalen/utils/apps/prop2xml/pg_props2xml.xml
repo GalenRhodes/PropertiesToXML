@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+    <!-- # suppress inspection "TrailingSpacesInProperty" for whole file -->
+    <entry key="xml.quote">&amp;quot;</entry>
+    <entry key="xml.format.line">%s%s&#10;</entry>
+    <entry key="xml.format.key">%s.%d</entry>
+    <entry key="xml.indent.width">4</entry>
+    <!-- # -->
+    <entry key="xml.header.1">&lt;?xml version="1.0" encoding="UTF-8" standalone="no"?&gt;</entry>
+    <entry key="xml.header.2">&lt;!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd"&gt;</entry>
+    <entry key="xml.header.3">&lt;properties&gt;</entry>
+    <!-- # -->
+    <entry key="xml.footer.1">&lt;/properties&gt;</entry>
+    <!-- # -->
+    <entry key="xml.comment.double.dash">--</entry>
+    <entry key="xml.comment.format">&lt;!-- %s --&gt;</entry>
+    <entry key="xml.comment.dash.replacement">8211</entry>
+    <entry key="xml.comment.regexp">^[ t]*(#.*)$</entry>
+    <!-- # -->
+    <entry key="xml.entry.novalue">&lt;entry key="%s" /&gt;</entry>
+    <entry key="xml.entry.value">&lt;entry key="%s"&gt;%s&lt;/entry&gt;</entry>
+    <!-- # -->
+    <entry key="xml.special.repl">&lt;:&amp;lt;,&gt;:&amp;gt;,&amp;:&amp;amp;</entry>
+    <entry key="xml.do.quotes.in.values">false</entry>
+    <!-- # -->
+</properties>
