@@ -22,6 +22,7 @@ package com.projectgalen.utils.apps.prop2xml;
 // IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 // ===========================================================================
 
+import com.projectgalen.lib.utils.PGProperties;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
@@ -32,44 +33,19 @@ import java.util.regex.Pattern;
 
 @SuppressWarnings("SameParameterValue")
 public final class PropertiesToXML {
-    private final Map<String, String> xmlChars;
-    private final ResourceBundle      msgs;
-    private final Properties          xmlProps;
-    private final Pattern             commentPattern;
-    private final boolean             quotesInValues;
-    private final String              xmlQuote;
-    private final String              lineFormat;
-    private final String              keyFormat;
-    private final String              doubleDash;
-    private final String              doubleDashReplacement;
-    private final String              tab;
+    private static final Map<String, String> xmlChars              = new TreeMap<>();
+    private static final ResourceBundle      msgs                  = ResourceBundle.getBundle("com.projectgalen.utils.apps.prop2xml.pg_messages");
+    private static final PGProperties        xmlProps              = PGProperties.getXMLProperties("pg_props2xml.xml", PropertiesToXML.class);
+    private static final Pattern             commentPattern        = Pattern.compile(xmlProps.getProperty("xml.comment.regexp"));
+    private static final boolean             quotesInValues        = "true".equals(xmlProps.getProperty("xml.do.quotes.in.values"));
+    private static final String              xmlQuote              = xmlProps.getProperty("xml.quote");
+    private static final String              lineFormat            = xmlProps.getProperty("xml.format.line");
+    private static final String              keyFormat             = xmlProps.getProperty("xml.format.key");
+    private static final String              doubleDash            = xmlProps.getProperty("xml.comment.double.dash");
+    private static final String              doubleDashReplacement = String.valueOf((char)Integer.parseInt(xmlProps.getProperty("xml.comment.dash.replacement", "8211"))).repeat(2);
+    private static final String              tab                   = " ".repeat(Math.max(0, Integer.parseInt(xmlProps.getProperty("xml.indent.width", "4"))));
 
-    public PropertiesToXML() {
-        try {
-            msgs     = ResourceBundle.getBundle("com.projectgalen.utils.apps.prop2xml.pg_messages");
-            xmlProps = new Properties();
-            xmlChars = new TreeMap<>();
-
-            xmlProps.loadFromXML(PropertiesToXML.class.getResourceAsStream("pg_props2xml.xml"));
-
-            quotesInValues        = "true".equals(xmlProps.getProperty("xml.do.quotes.in.values"));
-            xmlQuote              = xmlProps.getProperty("xml.quote");
-            lineFormat            = xmlProps.getProperty("xml.format.line");
-            keyFormat             = xmlProps.getProperty("xml.format.key");
-            doubleDash            = xmlProps.getProperty("xml.comment.double.dash");
-            doubleDashReplacement = String.valueOf((char)Integer.parseInt(xmlProps.getProperty("xml.comment.dash.replacement", "8211"))).repeat(2);
-            tab                   = " ".repeat(Math.max(0, Integer.parseInt(xmlProps.getProperty("xml.indent.width", "4"))));
-            commentPattern        = Pattern.compile(xmlProps.getProperty("xml.comment.regexp"));
-
-            for(String s : xmlProps.getProperty("xml.special.repl").split("\\s*,\\s*")) {
-                String[] t = s.split("\\s*:\\s*", 2);
-                if(t.length == 2) xmlChars.put(t[0], t[1]);
-            }
-        }
-        catch(Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
+    public PropertiesToXML() { }
 
     public int run(String... args) {
         if(args.length < 1) {
@@ -139,7 +115,7 @@ public final class PropertiesToXML {
                 sb.append(String.format("&#%d;", (int)ch));
             }
             else {
-                String cs = ("" + ch);
+                String cs = (String.valueOf(ch));
                 sb.append(Objects.toString(xmlChars.get(cs), cs));
             }
         }
@@ -191,6 +167,13 @@ public final class PropertiesToXML {
         catch(Throwable t) {
             t.printStackTrace(System.err);
             System.exit(1);
+        }
+    }
+
+    static {
+        for(String s : xmlProps.getProperty("xml.special.repl").split("\\s*,\\s*")) {
+            String[] t = s.split("\\s*:\\s*", 2);
+            if(t.length == 2) xmlChars.put(t[0], t[1]);
         }
     }
 }
