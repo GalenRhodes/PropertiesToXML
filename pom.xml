@@ -9,6 +9,8 @@
     <version>1.0.0</version>
 
     <properties>
+        <app.base.path>com/projectgalen/utils/apps/prop2xml</app.base.path>
+        <app.base.package>com.projectgalen.utils.apps.prop2xml</app.base.package>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -16,13 +18,26 @@
         <github.global.server>github</github.global.server>
         <github.owner>GalenRhodes</github.owner>
         <github.mvn.repo>maven-repo</github.mvn.repo>
-        <project.build.module.directory>${project.basedir}/src/main</project.build.module.directory>
-        <project.build.jars.directory>${project.build.directory}/jars</project.build.jars.directory>
-        <project.build.resources.directory>${project.build.module.directory}/resources</project.build.resources.directory>
-        <project.build.metainf.directory>${project.build.module.directory}/META-INF</project.build.metainf.directory>
+        <project.build.module.src.directory>${project.basedir}/src/main</project.build.module.src.directory>
+        <project.build.resources.directory>${project.build.module.src.directory}/resources</project.build.resources.directory>
+        <project.build.metainf.directory>${project.build.module.src.directory}/META-INF</project.build.metainf.directory>
+        <project.build.jarclasses.directory>${project.build.directory}/jars-classes</project.build.jarclasses.directory>
+        <props2xml.jar.path>${project.basedir}/utils/PropertiesToXML-1.0.0.jar</props2xml.jar.path>
+        <intellij.version>231.8109.175</intellij.version>
+        <intellij.artifactid.excludes.list>
+            <!-- These are only needed during the javac2 compilation process and not for runtime. -->
+            asm-all,
+            forms,
+            java-compiler-ant-tasks,
+            java-compiler-instrumentation-util,
+            java-compiler-instrumentation-util-java8,
+            java-gui-forms-compiler,
+            jaxen,
+            util-jdom
+        </intellij.artifactid.excludes.list>
     </properties>
 
-    <name>Properties file To XML file Converter</name>
+    <name>${project.artifactId}</name>
     <description>${project.name}</description>
     <url>https://github.com/${github.owner}/${project.artifactId}</url>
 
@@ -38,6 +53,18 @@
         <repository>
             <id>central</id>
             <url>https://repo1.maven.org/maven2/</url>
+        </repository>
+        <repository>
+            <id>${github.owner}</id>
+            <url>https://github.com/${github.owner}/${github.mvn.repo}/raw/main/</url>
+        </repository>
+        <repository>
+            <id>jetbrains.releases</id>
+            <url>https://www.jetbrains.com/intellij-repository/releases</url>
+        </repository>
+        <repository>
+            <id>jetbrains.3rdparty</id>
+            <url>https://cache-redirector.jetbrains.com/intellij-dependencies</url>
         </repository>
     </repositories>
 
@@ -64,9 +91,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.jetbrains</groupId>
-            <artifactId>annotations</artifactId>
-            <version>23.0.0</version>
+            <groupId>com.projectgalen.lib</groupId>
+            <artifactId>PGUtils</artifactId>
+            <version>1.0.0</version>
         </dependency>
     </dependencies>
 
@@ -76,6 +103,32 @@
         <defaultGoal>package</defaultGoal>
 
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>1</id>
+                        <phase>compile</phase>
+                        <configuration>
+                            <target>
+                                <path id="j2sp">
+                                    <pathelement location="${project.build.module.src.directory}/java"/>
+                                </path>
+                                <taskdef name="javac2" classpathref="maven.runtime.classpath" classname="com.intellij.ant.Javac2"/>
+                                <javac2 destdir="${project.build.outputDirectory}" classpathref="maven.compile.classpath" includeantruntime="true">
+                                    <src refid="j2sp"/>
+                                </javac2>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -94,23 +147,15 @@
                 <executions>
                     <execution>
                         <id>unpack-dependencies</id>
-                        <phase>compile</phase>
+                        <phase>prepare-package</phase>
                         <goals>
                             <goal>unpack-dependencies</goal>
                         </goals>
                         <configuration>
                             <excludes>**/MANIFEST.MF,META-INF/maven/</excludes>
-                            <outputDirectory>${project.build.jars.directory}/classes</outputDirectory>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>copy-dependencies</id>
-                        <phase>compile</phase>
-                        <goals>
-                            <goal>copy-dependencies</goal>
-                        </goals>
-                        <configuration>
-                            <outputDirectory>${project.build.jars.directory}</outputDirectory>
+                            <outputDirectory>${project.build.jarclasses.directory}</outputDirectory>
+                            <excludeArtifactIds>${intellij.artifactid.excludes.list}</excludeArtifactIds>
+                            <overWriteIfNewer>false</overWriteIfNewer>
                         </configuration>
                     </execution>
                 </executions>
@@ -123,13 +168,15 @@
                 <executions>
                     <execution>
                         <id>copy-resources</id>
-                        <phase>compile</phase>
-                        <goals><goal>copy-resources</goal></goals>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
                         <configuration>
                             <outputDirectory>${project.build.outputDirectory}</outputDirectory>
                             <resources>
                                 <resource>
-                                    <directory>${project.build.jars.directory}/classes</directory>
+                                    <directory>${project.build.jarclasses.directory}</directory>
                                     <filtering>false</filtering>
                                 </resource>
                             </resources>
