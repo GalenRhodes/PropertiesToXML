@@ -23,6 +23,7 @@ package com.projectgalen.utils.apps.prop2xml;
 // ===========================================================================
 
 import com.projectgalen.lib.utils.PGProperties;
+import com.projectgalen.lib.utils.PGResourceBundle;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
@@ -34,7 +35,7 @@ import java.util.regex.Pattern;
 @SuppressWarnings("SameParameterValue")
 public final class PropertiesToXML {
     private static final Map<String, String> xmlChars              = new TreeMap<>();
-    private static final ResourceBundle      msgs                  = ResourceBundle.getBundle("com.projectgalen.utils.apps.prop2xml.pg_messages");
+    private static final PGResourceBundle    msgs                  = PGResourceBundle.getPGBundle("com.projectgalen.utils.apps.prop2xml.pg_messages");
     private static final PGProperties        xmlProps              = PGProperties.getXMLProperties("pg_props2xml.xml", PropertiesToXML.class);
     private static final Pattern             commentPattern        = Pattern.compile(xmlProps.getProperty("xml.comment.regexp"));
     private static final boolean             quotesInValues        = "true".equals(xmlProps.getProperty("xml.do.quotes.in.values"));
@@ -47,25 +48,89 @@ public final class PropertiesToXML {
 
     public PropertiesToXML() { }
 
-    public int run(String... args) {
-        if(args.length < 1) {
+    public int run(String @NotNull ... args) {
+        int errno = 0;
+
+        File         outputDir = null;
+        File         srcDir    = null;
+        List<String> files     = new ArrayList<>();
+        int          i         = 0;
+
+        while(i < args.length) {
+            String a = args[i++];
+
+            switch(a) {
+                case "--src-dir": {
+                    String dir = ((i < args.length) ? args[i++].trim() : "");
+
+                    if(dir.length() == 0) {
+                        System.err.println(msgs.getString("msg.err.p2x.missing_src_dir"));
+                        return 1;
+                    }
+
+                    srcDir = new File(dir);
+                    break;
+                }
+                case "--dest-dir": {
+                    String dir = ((i < args.length) ? args[i++].trim() : "");
+
+                    if(dir.length() == 0) {
+                        System.err.println(msgs.getString("msg.err.p2x.missing_dest_dir"));
+                        return 1;
+                    }
+
+                    outputDir = new File(dir);
+                    break;
+                }
+                case "--file": {
+                    String file = ((i < args.length) ? args[i++].trim() : "");
+
+                    if(file.length() == 0) {
+                        System.err.println(msgs.getString("msg.err.p2x.missing_filename"));
+                        return 1;
+                    }
+
+                    files.add(file);
+                    break;
+                }
+                case "--": {
+                    // Get the remaining arguments as files.
+                    while(i < args.length) {
+                        String file = args[i++].trim();
+                        if(file.length() > 0) files.add(file);
+                    }
+                    break;
+                }
+                default:
+                    System.err.println(msgs.format("msg.err.p2x.invalid_arg", a));
+                    return 1;
+            }
+        }
+
+        if(srcDir == null) srcDir = new File(".");
+
+        if(files.isEmpty()) {
             System.err.println(msgs.getString("msg.err.p2x.no.props.file.specified"));
             return 1;
         }
 
-        int errno = 0;
-
-        for(String filename : args) {
-            File fileIn  = new File(filename);
-            File fileOut = new File(fileIn.getParentFile(), String.format("%s.xml", getNameWithoutExt(fileIn)));
-            errno = convertFile(fileIn, fileOut);
+        for(String inFilename : files) {
+            String outFilename = String.format("%s.xml", getNameWithoutExt(inFilename));
+            File   fileIn      = new File(srcDir, inFilename);
+            File   fileOut     = new File(((outputDir == null) ? fileIn.getParentFile() : outputDir), outFilename);
+            System.out.printf(msgs.getString("msg.convert1"), inFilename, outFilename);
+            int e = convertFile(fileIn, fileOut);
+            System.out.printf(msgs.getString("msg.convert2"), e);
+            if(errno == 0) errno = e;
         }
 
         return errno;
     }
 
     private int convertFile(File fileIn, File fileOut) {
-        Properties vals = loadPropertyValues(fileIn);
+        Properties vals         = loadPropertyValues(fileIn);
+        int        entryCount   = 0;
+        int        commentCount = 0;
 
         try(BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileIn), StandardCharsets.ISO_8859_1))) {
             String line = reader.readLine();
@@ -79,11 +144,18 @@ public final class PropertiesToXML {
 
                         if(m.matches()) {
                             writeComment(writer, m.group(1));
+                            commentCount++;
                         }
                         else {
                             String[] z = line.split("\\s*=", 2);
-                            if(z.length == 2) writeValue(writer, z[0].trim(), vals, quotesInValues);
-                            else writeComment(writer, line.trim());
+                            if(z.length == 2) {
+                                writeValue(writer, z[0].trim(), vals, quotesInValues);
+                                entryCount++;
+                            }
+                            else {
+                                writeComment(writer, line.trim());
+                                commentCount++;
+                            }
                         }
 
                         line = reader.readLine();
@@ -94,6 +166,8 @@ public final class PropertiesToXML {
                     writer.flush();
                 }
             }
+
+            System.out.printf(msgs.getString("msg.counts"), entryCount, commentCount);
 
             return 0;
         }
@@ -121,12 +195,6 @@ public final class PropertiesToXML {
         }
 
         return sb.toString();
-    }
-
-    private @NotNull String getNameWithoutExt(File fileIn) {
-        String fn = fileIn.getName();
-        int    i  = fn.lastIndexOf('.');
-        return ((i <= 0) ? fn : fn.substring(0, i));
     }
 
     private @NotNull Properties loadPropertyValues(File fileIn) {
@@ -168,6 +236,11 @@ public final class PropertiesToXML {
             t.printStackTrace(System.err);
             System.exit(1);
         }
+    }
+
+    private static @NotNull String getNameWithoutExt(@NotNull String fn) {
+        int i = fn.lastIndexOf('.');
+        return ((i <= 0) ? fn : fn.substring(0, i));
     }
 
     static {
